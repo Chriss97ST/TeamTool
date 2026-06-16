@@ -12,7 +12,7 @@ TeamTool ist ein internes Web-Tool fuer Arbeitsteams mit:
 
 - Backend: FastAPI (Python)
 - ORM: SQLAlchemy 2
-- Datenbank: PostgreSQL
+- Datenbank: SQLite lokal, PostgreSQL optional fuer produktiven Betrieb
 - Auth: JWT (Access Token)
 - Frontend: Moderne Single-Page-App (HTML/CSS/JS)
 
@@ -25,6 +25,12 @@ TeamTool ist ein internes Web-Tool fuer Arbeitsteams mit:
 4. `.env.example` nach `.env` kopieren und Werte anpassen.
 5. API starten:
    - `uvicorn app.main:app --reload`
+
+Hinweis zur Datenbank:
+
+- Lokal startet das Projekt standardmaessig mit SQLite (`teamtool.db`).
+- Wenn `DATABASE_URL` auf PostgreSQL zeigt, aber kein Postgres-Server laeuft, faellt die App lokal automatisch auf SQLite zurueck.
+- Fuer einen echten PostgreSQL-Betrieb muss ein Server auf der konfigurierten URL erreichbar sein.
 
 OpenAPI liegt dann unter:
 

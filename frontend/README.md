@@ -10,12 +10,12 @@ Dieses Frontend ist eine schnelle, moderne SPA ohne Build-Tooling.
 2. Frontend statisch ausliefern:
    - `cd ../frontend`
    - `/opt/homebrew/bin/python3 -m http.server 5173`
-3. Oeffnen:
+3. Öffnen:
    - `http://127.0.0.1:5173`
 
 ## Hinweise
 
-- API-Basis ist standardmaessig `http://127.0.0.1:8000/api`.
+- API-Basis ist standardmäßig `http://127.0.0.1:8000/api`.
 - API-URL kann oben rechts in der App angepasst werden.
 - Token und API-URL werden im Browser `localStorage` gespeichert.
 
@@ -26,4 +26,4 @@ Dieses Frontend ist eine schnelle, moderne SPA ohne Build-Tooling.
 - Task Ablauf: Schneller Kanban-Flow (`planned` -> `in_progress` -> `done`)
 - Wochenplan: Tagesbezogene Stunden-Logs inkl. Berechtigungen
 - Notizen: Private/gemeinsame Notizen und Freigaben
-- User: Teamuebersicht mit IDs
+- User: Teamübersicht mit IDs

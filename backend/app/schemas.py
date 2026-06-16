@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.db.models import ChatRole, TaskStatus
+from app.db.models import ChatInviteStatus, ChatRole, TaskStatus
 
 
 class TokenResponse(BaseModel):
@@ -39,11 +39,19 @@ class ChatOut(BaseModel):
     id: str
     name: str | None
     is_group: bool
-
-    model_config = {"from_attributes": True}
+    display_name: str
+    member_ids: list[str]
+    member_names: list[str]
+    membership_status: str
+    pending_invite_id: str | None = None
 
 
 class MessageCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=5000)
+    reply_to_message_id: str | None = None
+
+
+class MessageUpdate(BaseModel):
     content: str = Field(min_length=1, max_length=5000)
 
 
@@ -51,10 +59,20 @@ class MessageOut(BaseModel):
     id: str
     chat_id: str
     sender_id: str
+    sender_name: str
     content: str
     created_at: datetime
+    reply_to_message_id: str | None = None
+    reply_to_preview: str | None = None
+    reply_to_sender_name: str | None = None
+    is_edited: bool = False
+    is_deleted: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class ChatInviteActionOut(BaseModel):
+    status: ChatInviteStatus
 
 
 class TaskCreate(BaseModel):

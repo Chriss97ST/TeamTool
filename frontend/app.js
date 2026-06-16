@@ -6,6 +6,10 @@ const state = {
   chats: [],
   currentChatId: null,
   messages: [],
+  replyToMessage: null,
+  messageMenu: null,
+  showPrivateChatPicker: false,
+  showGroupChatCreator: false,
   tasks: [],
   worklogs: [],
   notes: [],
@@ -124,6 +128,9 @@ async function loadUsers() {
 
 async function loadChats() {
   state.chats = await api("/chats");
+  if (state.currentChatId && !state.chats.some((chat) => chat.id === state.currentChatId)) {
+    state.currentChatId = null;
+  }
   if (!state.currentChatId && state.chats[0]) state.currentChatId = state.chats[0].id;
 }
 
@@ -147,6 +154,41 @@ async function loadNotes() {
   state.notes = await api("/notes");
 }
 
+function getCurrentChat() {
+  return state.chats.find((chat) => chat.id === state.currentChatId) || null;
+}
+
+function getActiveChats() {
+  return state.chats.filter((chat) => chat.membership_status === "active");
+}
+
+function getPendingChats() {
+  return state.chats.filter((chat) => chat.membership_status === "pending");
+}
+
+function getUserName(userId) {
+  const user = state.users.find((entry) => entry.id === userId);
+  return user ? user.full_name : userId;
+}
+
+function getMessageActions(message) {
+  const actions = [{ id: "reply", label: "Antworten" }];
+  if (message.sender_id === state.me?.id && !message.is_deleted) {
+    actions.push({ id: "edit", label: "Bearbeiten" });
+    actions.push({ id: "delete", label: "Löschen", destructive: true });
+  }
+  return actions;
+}
+
+function openMessageMenu(messageId) {
+  state.messageMenu = { messageId };
+  renderAll();
+}
+
+function closeMessageMenu() {
+  state.messageMenu = null;
+}
+
 function dashboardHtml() {
   const done = state.tasks.filter((t) => t.status === "done").length;
   const progress = state.tasks.filter((t) => t.status === "in_progress").length;
@@ -155,7 +197,7 @@ function dashboardHtml() {
 
   return `
     <div class="grid-3">
-      <article class="panel card kpi"><p class="eyebrow">Tasks</p><h3>${state.tasks.length}</h3><p class="muted">Alle sichtbaren Auftraege</p></article>
+      <article class="panel card kpi"><p class="eyebrow">Tasks</p><h3>${state.tasks.length}</h3><p class="muted">Alle sichtbaren Aufträge</p></article>
       <article class="panel card kpi"><p class="eyebrow">Aktive Woche</p><h3>${weekHours}h</h3><p class="muted">Erfasste Stunden</p></article>
       <article class="panel card kpi"><p class="eyebrow">Chats</p><h3>${state.chats.length}</h3><p class="muted">Private + Gruppenchats</p></article>
     </div>
@@ -166,64 +208,154 @@ function dashboardHtml() {
     </div>
     <article class="panel card">
       <h4>Heute Fokus</h4>
-      <p class="muted">Nutze Task Ablauf fuer schnelle Statuswechsel und Wochenplan fuer Tagesbuchung.</p>
+      <p class="muted">Nutze Task Ablauf für schnelle Statuswechsel und Wochenplan für Tagesbuchung.</p>
     </article>
   `;
 }
 
 function chatsHtml() {
+  const currentChat = getCurrentChat();
+  const activeChats = getActiveChats();
+  const pendingChats = getPendingChats();
   const usersOptions = state.users
+    .filter((u) => u.id !== state.me?.id)
     .map((u) => `<option value="${u.id}">${u.full_name} (${u.email})</option>`)
     .join("");
 
-  const chatItems = state.chats
+  const groupUserChoices = state.users
+    .filter((u) => u.id !== state.me?.id)
+    .map(
+      (u) => `<label class="check-option"><input type="checkbox" name="member_ids" value="${u.id}" /> <span>${u.full_name}</span><small>${u.email}</small></label>`
+    )
+    .join("");
+
+  const pendingItems = pendingChats
+    .map(
+      (c) => `<article class="list-item invite-item">
+        <div class="row between"><strong>${c.display_name}</strong><span class="tag">Einladung</span></div>
+        <p class="muted compact">Zustimmung erforderlich, bevor du beitrittst.</p>
+        <div class="row">
+          <button class="btn inline subtle invite-accept" data-invite-id="${c.pending_invite_id}">Beitreten</button>
+          <button class="btn inline ghost invite-decline" data-invite-id="${c.pending_invite_id}">Ablehnen</button>
+        </div>
+      </article>`
+    )
+    .join("");
+
+  const chatItems = activeChats
     .map((c) => {
-      const title = c.is_group ? c.name || "Gruppe" : "Privatchat";
+      const subtitle = c.is_group ? c.member_names.join(", ") : c.member_names.filter((name) => name !== state.me?.full_name).join("");
       return `<button class="list-item chat-pick ${state.currentChatId === c.id ? "active" : ""}" data-chat-id="${c.id}">
-        <div class="row between"><strong>${title}</strong> <span class="tag">${c.is_group ? "Gruppe" : "Privat"}</span></div>
+        <div class="row between"><strong>${c.display_name}</strong> <span class="tag">${c.is_group ? "Gruppe" : "Privat"}</span></div>
+        <p class="muted compact">${subtitle || "Direkter Chat"}</p>
       </button>`;
     })
     .join("");
 
   const msgItems = state.messages
-    .map(
-      (m) => `<div class="message"><div class="row between"><strong>${m.sender_id}</strong><small>${new Date(
-        m.created_at
-      ).toLocaleString()}</small></div><div>${m.content}</div></div>`
-    )
+    .map((m) => {
+      const actions = getMessageActions(m)
+        .map(
+          (action) => `<button class="message-menu-item ${action.destructive ? "danger" : ""}" data-action="${action.id}" data-message-id="${m.id}">${action.label}</button>`
+        )
+        .join("");
+
+      const menu =
+        state.messageMenu?.messageId === m.id
+          ? `<div class="message-menu visible">${actions}</div>`
+          : "";
+
+      return `<div class="message ${m.sender_id === state.me?.id ? "self" : "other"}" data-message-id="${m.id}">
+        ${
+          m.reply_to_message_id
+            ? `<div class="reply-chip"><strong>${m.reply_to_sender_name || "Antwort"}</strong><span>${m.reply_to_preview || ""}</span></div>`
+            : ""
+        }
+        <div class="message-bubble">
+          <div class="row between message-meta"><strong>${m.sender_name || getUserName(m.sender_id)}</strong><small>${new Date(
+            m.created_at
+          ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${m.is_edited ? " · bearbeitet" : ""}</small></div>
+          <div class="message-text">${m.content}</div>
+        </div>
+        ${menu}
+      </div>`;
+    })
     .join("");
 
   return `
     <div class="chat-layout">
       <article class="panel card">
-        <h4>Chat Uebersicht</h4>
-        <div class="list">${chatItems || "<p class='muted'>Noch keine Chats</p>"}</div>
+        <div class="row between section-head">
+          <h4>Chat-Übersicht</h4>
+          <div class="row tight">
+            <button class="btn inline subtle chat-toggle" data-target="private" title="Privatchat starten">+</button>
+            <button class="btn inline ghost chat-toggle" data-target="group" title="Gruppe erstellen">Gruppe</button>
+          </div>
+        </div>
+
+        ${
+          state.showPrivateChatPicker
+            ? `<article class="subpanel">
+                <h5>Privatchat starten</h5>
+                <form id="privateChatForm" class="row">
+                  <select name="other_user_id" required><option value="">User wählen</option>${usersOptions}</select>
+                  <button class="btn subtle" type="submit">Starten</button>
+                </form>
+              </article>`
+            : ""
+        }
+
+        ${
+          state.showGroupChatCreator
+            ? `<article class="subpanel">
+                <h5>Gruppe erstellen</h5>
+                <form id="groupChatForm" class="form-grid">
+                  <label>Name<input type="text" name="name" required /></label>
+                  <div class="check-list">${groupUserChoices || "<p class='muted'>Keine weiteren User</p>"}</div>
+                  <button class="btn subtle" type="submit">Gruppe anlegen</button>
+                </form>
+              </article>`
+            : ""
+        }
+
+        ${pendingItems ? `<div class="list pending-list">${pendingItems}</div>` : ""}
+        <div class="list">${chatItems || "<p class='muted'>Noch keine aktiven Chats</p>"}</div>
       </article>
 
       <div class="list">
         <article class="panel card">
-          <h4>Neuer Privatchat</h4>
-          <form id="privateChatForm" class="row">
-            <select name="other_user_id" required><option value="">User waehlen</option>${usersOptions}</select>
-            <button class="btn subtle" type="submit">Starten</button>
-          </form>
-        </article>
-
-        <article class="panel card">
-          <h4>Neue Gruppe</h4>
-          <form id="groupChatForm" class="form-grid">
-            <label>Name<input type="text" name="name" required /></label>
-            <label>Mitglieder (kommagetrennte User IDs)<input type="text" name="member_ids" placeholder="id1,id2" /></label>
-            <button class="btn subtle" type="submit">Gruppe erstellen</button>
-          </form>
-        </article>
-
-        <article class="panel card">
-          <h4>Nachrichten</h4>
+          <div class="row between section-head">
+            <div>
+              <h4>Nachrichten</h4>
+              <p class="muted">${currentChat ? currentChat.display_name : "Kein Chat ausgewählt"}</p>
+            </div>
+            ${
+              currentChat
+                ? `<div class="row tight">
+                    ${
+                      currentChat.is_group
+                        ? `<button class="btn inline ghost chat-leave" data-chat-id="${currentChat.id}">Gruppe verlassen</button>`
+                        : `<button class="btn inline danger chat-delete" data-chat-id="${currentChat.id}">Privatchat löschen</button>`
+                    }
+                  </div>`
+                : ""
+            }
+          </div>
+          ${
+            state.replyToMessage
+              ? `<div class="reply-banner">
+                  <div>
+                    <strong>Antwort an ${state.replyToMessage.sender_name}</strong>
+                    <p>${state.replyToMessage.content}</p>
+                  </div>
+                  <button class="btn inline ghost reply-cancel" type="button">Abbrechen</button>
+                </div>`
+              : ""
+          }
           <div class="message-list">${msgItems || "<p class='muted'>Noch keine Nachrichten</p>"}</div>
           <form id="messageForm" class="row">
             <input name="content" placeholder="Nachricht schreiben..." required />
-            <button type="submit" class="btn primary">Senden</button>
+            <button type="submit" class="btn primary" ${currentChat ? "" : "disabled"}>Senden</button>
           </form>
         </article>
       </div>
@@ -238,7 +370,7 @@ function taskCard(t) {
     <div class="row">
       <span class="tag">Plan: ${t.planned_hours ?? "-"}h</span>
       <span class="tag">Ist: ${t.actual_hours ?? "-"}h</span>
-      <span class="tag">Faellig: ${t.due_date || "-"}</span>
+      <span class="tag">Fällig: ${t.due_date || "-"}</span>
     </div>
     <div class="row">
       <button class="btn inline subtle task-status" data-task-id="${t.id}" data-status="planned">Plan</button>
@@ -261,9 +393,9 @@ function tasksHtml() {
       <form id="taskForm" class="grid-3">
         <label>Titel<input type="text" name="title" required /></label>
         <label>Assignee ID<input type="text" name="assignee_id" /></label>
-        <label>Faelligkeit<input type="date" name="due_date" /></label>
+        <label>Fälligkeit<input type="date" name="due_date" /></label>
         <label>Planstunden<input type="number" step="0.25" name="planned_hours" /></label>
-        <label>Shared<select name="is_shared"><option value="false">Nein</option><option value="true">Ja</option></select></label>
+        <label>Gemeinsam<select name="is_shared"><option value="false">Nein</option><option value="true">Ja</option></select></label>
         <label>Beschreibung<textarea name="description"></textarea></label>
         <button class="btn primary" type="submit">Task anlegen</button>
       </form>
@@ -286,16 +418,16 @@ function weekHtml() {
         w.details || ""
       }</p><p class="muted">Task: ${w.task_id || "-"}</p><div class="row"><button class="btn inline ghost wk-edit" data-id="${
         w.id
-      }">Bearbeiten</button><button class="btn inline danger wk-del" data-id="${w.id}">Loeschen</button></div></article>`
+      }">Bearbeiten</button><button class="btn inline danger wk-del" data-id="${w.id}">Löschen</button></div></article>`
     )
     .join("");
 
   return `
     <div class="grid-2">
       <article class="panel card">
-        <h4>Freigabe fuer Bearbeiter</h4>
+        <h4>Freigabe für Bearbeiter</h4>
         <form id="permForm" class="row">
-          <input name="editor_id" placeholder="Editor User ID" required />
+          <input name="editor_id" placeholder="Editor-User-ID" required />
           <select name="can_edit"><option value="true">Darf editieren</option><option value="false">Nur entziehen</option></select>
           <button class="btn subtle" type="submit">Speichern</button>
         </form>
@@ -312,8 +444,8 @@ function weekHtml() {
     <article class="panel card">
       <h4>Eintrag hinzufügen</h4>
       <form id="worklogForm" class="grid-3">
-        <label>User ID<input name="user_id" required /></label>
-        <label>Task ID<input name="task_id" /></label>
+        <label>User-ID<input name="user_id" required /></label>
+        <label>Task-ID<input name="task_id" /></label>
         <label>Datum<input type="date" name="work_date" required /></label>
         <label>Stunden<input type="number" step="0.25" name="hours" min="0.25" max="24" required /></label>
         <label>Details<textarea name="details"></textarea></label>
@@ -323,7 +455,7 @@ function weekHtml() {
 
     <article class="panel card">
       <h4>Wochen-Einträge</h4>
-      <div class="list">${rows || "<p class='muted'>Keine Eintraege</p>"}</div>
+      <div class="list">${rows || "<p class='muted'>Keine Einträge</p>"}</div>
     </article>
   `;
 }
@@ -338,7 +470,7 @@ function notesHtml() {
       <div class="row">
         <button class="btn inline ghost note-edit" data-id="${n.id}">Bearbeiten</button>
         <button class="btn inline subtle note-share" data-id="${n.id}">Freigeben</button>
-        <button class="btn inline danger note-del" data-id="${n.id}">Loeschen</button>
+        <button class="btn inline danger note-del" data-id="${n.id}">Löschen</button>
       </div>
     </article>`
     )
@@ -349,13 +481,13 @@ function notesHtml() {
       <h4>Neue Notiz</h4>
       <form id="noteForm" class="grid-2">
         <label>Titel<input name="title" required /></label>
-        <label>Shared<select name="is_shared"><option value="false">Nein</option><option value="true">Ja</option></select></label>
+        <label>Gemeinsam<select name="is_shared"><option value="false">Nein</option><option value="true">Ja</option></select></label>
         <label>Inhalt<textarea name="content" required></textarea></label>
         <button class="btn primary" type="submit">Notiz speichern</button>
       </form>
     </article>
     <article class="panel card">
-      <h4>Notizbloecke</h4>
+      <h4>Notizblöcke</h4>
       <div class="list">${noteItems || "<p class='muted'>Keine Notizen</p>"}</div>
     </article>
   `;
@@ -386,11 +518,45 @@ function renderAll() {
 }
 
 function bindDynamicHandlers() {
+  document.addEventListener("click", closeMessageMenu, { once: true });
+
+  document.querySelectorAll(".chat-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.target;
+      if (target === "private") {
+        state.showPrivateChatPicker = !state.showPrivateChatPicker;
+        if (state.showPrivateChatPicker) state.showGroupChatCreator = false;
+      }
+      if (target === "group") {
+        state.showGroupChatCreator = !state.showGroupChatCreator;
+        if (state.showGroupChatCreator) state.showPrivateChatPicker = false;
+      }
+      renderAll();
+    });
+  });
+
   document.querySelectorAll(".chat-pick").forEach((btn) => {
     btn.addEventListener("click", async () => {
       state.currentChatId = btn.dataset.chatId;
+      state.replyToMessage = null;
       await loadMessages();
       renderAll();
+    });
+  });
+
+  document.querySelectorAll(".invite-accept").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await api(`/chats/invites/${btn.dataset.inviteId}/accept`, { method: "POST" });
+      await refreshCore();
+      alertMsg("Gruppeneinladung angenommen");
+    });
+  });
+
+  document.querySelectorAll(".invite-decline").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await api(`/chats/invites/${btn.dataset.inviteId}/decline`, { method: "POST" });
+      await refreshCore();
+      alertMsg("Gruppeneinladung abgelehnt");
     });
   });
 
@@ -399,12 +565,15 @@ function bindDynamicHandlers() {
     privateChatForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(privateChatForm);
-      await api("/chats/private", {
+      const knownChatIds = new Set(state.chats.map((chat) => chat.id));
+      const chat = await api("/chats/private", {
         method: "POST",
         body: JSON.stringify({ other_user_id: fd.get("other_user_id") }),
       });
+      state.currentChatId = chat.id;
+      state.showPrivateChatPicker = false;
       await refreshCore();
-      alertMsg("Privatchat erstellt");
+      alertMsg(knownChatIds.has(chat.id) ? "Vorhandener Privatchat geöffnet" : "Privatchat erstellt");
     });
   }
 
@@ -413,14 +582,12 @@ function bindDynamicHandlers() {
     groupChatForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(groupChatForm);
-      const ids = String(fd.get("member_ids") || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const ids = fd.getAll("member_ids").map((value) => String(value));
       await api("/chats/groups", {
         method: "POST",
         body: JSON.stringify({ name: fd.get("name"), member_ids: ids }),
       });
+      state.showGroupChatCreator = false;
       await refreshCore();
       alertMsg("Gruppenchat erstellt");
     });
@@ -430,17 +597,115 @@ function bindDynamicHandlers() {
   if (messageForm) {
     messageForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!state.currentChatId) return alertMsg("Bitte einen Chat waehlen", "err");
+      if (!state.currentChatId) return alertMsg("Bitte einen Chat wählen", "err");
       const fd = new FormData(messageForm);
       await api(`/chats/${state.currentChatId}/messages`, {
         method: "POST",
-        body: JSON.stringify({ content: fd.get("content") }),
+        body: JSON.stringify({
+          content: fd.get("content"),
+          reply_to_message_id: state.replyToMessage?.id || null,
+        }),
       });
       messageForm.reset();
+      state.replyToMessage = null;
       await loadMessages();
       renderAll();
     });
   }
+
+  const replyCancel = document.querySelector(".reply-cancel");
+  if (replyCancel) {
+    replyCancel.addEventListener("click", () => {
+      state.replyToMessage = null;
+      renderAll();
+    });
+  }
+
+  let longPressTimer = null;
+  const clearLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
+
+  document.querySelectorAll(".message").forEach((node) => {
+    const messageId = node.dataset.messageId;
+    node.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      openMessageMenu(messageId);
+    });
+
+    node.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch") return;
+      clearLongPress();
+      longPressTimer = window.setTimeout(() => openMessageMenu(messageId), 550);
+    });
+
+    node.addEventListener("pointerup", clearLongPress);
+    node.addEventListener("pointerleave", clearLongPress);
+    node.addEventListener("pointercancel", clearLongPress);
+  });
+
+  document.querySelectorAll(".message-menu-item").forEach((btn) => {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const message = state.messages.find((entry) => entry.id === btn.dataset.messageId);
+      if (!message) return;
+      const action = btn.dataset.action;
+      closeMessageMenu();
+
+      if (action === "reply") {
+        state.replyToMessage = {
+          id: message.id,
+          sender_name: message.sender_name,
+          content: message.content,
+        };
+        renderAll();
+        return;
+      }
+
+      if (action === "edit") {
+        const content = window.prompt("Nachricht bearbeiten:", message.content);
+        if (!content) return;
+        await api(`/chats/messages/${message.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ content }),
+        });
+        await loadMessages();
+        renderAll();
+        alertMsg("Nachricht bearbeitet");
+        return;
+      }
+
+      if (action === "delete") {
+        await api(`/chats/messages/${message.id}`, { method: "DELETE" });
+        await loadMessages();
+        renderAll();
+        alertMsg("Nachricht gelöscht");
+      }
+    });
+  });
+
+  document.querySelectorAll(".chat-delete").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await api(`/chats/${btn.dataset.chatId}`, { method: "DELETE" });
+      state.currentChatId = null;
+      state.replyToMessage = null;
+      await refreshCore();
+      alertMsg("Privatchat gelöscht");
+    });
+  });
+
+  document.querySelectorAll(".chat-leave").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await api(`/chats/${btn.dataset.chatId}/leave`, { method: "POST" });
+      state.currentChatId = null;
+      state.replyToMessage = null;
+      await refreshCore();
+      alertMsg("Gruppe verlassen");
+    });
+  });
 
   const taskForm = document.getElementById("taskForm");
   if (taskForm) {
@@ -479,7 +744,7 @@ function bindDynamicHandlers() {
       const input = window.prompt("Neue Ist-Stunden:");
       if (!input) return;
       const hours = Number(input);
-      if (Number.isNaN(hours)) return alertMsg("Ungueltige Zahl", "err");
+      if (Number.isNaN(hours)) return alertMsg("Ungültige Zahl", "err");
       await api(`/tasks/${btn.dataset.taskId}`, {
         method: "PATCH",
         body: JSON.stringify({ actual_hours: hours }),
@@ -536,7 +801,7 @@ function bindDynamicHandlers() {
     btn.addEventListener("click", async () => {
       await api(`/worklogs/${btn.dataset.id}`, { method: "DELETE" });
       await refreshCore();
-      alertMsg("Eintrag geloescht");
+      alertMsg("Eintrag gelöscht");
     });
   });
 
@@ -576,7 +841,7 @@ function bindDynamicHandlers() {
     btn.addEventListener("click", async () => {
       await api(`/notes/${btn.dataset.id}`, { method: "DELETE" });
       await refreshCore();
-      alertMsg("Notiz geloescht");
+      alertMsg("Notiz gelöscht");
     });
   });
 
@@ -595,7 +860,7 @@ function bindDynamicHandlers() {
 
   document.querySelectorAll(".note-share").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const userId = window.prompt("User ID fuer Freigabe:");
+      const userId = window.prompt("User-ID für Freigabe:");
       if (!userId) return;
       const canEdit = window.confirm("Soll Bearbeitung erlaubt sein?");
       await api(`/notes/${btn.dataset.id}/share`, {

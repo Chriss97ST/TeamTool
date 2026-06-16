@@ -45,6 +45,12 @@ class ChatRole(str, Enum):
     admin = "admin"
 
 
+class ChatInviteStatus(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    declined = "declined"
+
+
 class User(TimestampMixin, Base):
     __tablename__ = "users"
 
@@ -95,6 +101,30 @@ class Message(Base):
     sender_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class ChatInvite(TimestampMixin, Base):
+    __tablename__ = "chat_invites"
+    __table_args__ = (UniqueConstraint("chat_id", "user_id", name="uq_chat_invite"),)
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    chat_id: Mapped[str] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    invited_by: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    status: Mapped[ChatInviteStatus] = mapped_column(SQLEnum(ChatInviteStatus), default=ChatInviteStatus.pending)
+
+
+class MessageState(TimestampMixin, Base):
+    __tablename__ = "message_states"
+    __table_args__ = (UniqueConstraint("message_id", name="uq_message_state_message"),)
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    message_id: Mapped[str] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"), index=True)
+    reply_to_message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    edited_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Task(TimestampMixin, Base):
