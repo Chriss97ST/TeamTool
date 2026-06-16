@@ -13,7 +13,7 @@ Dieses Frontend ist eine schnelle, moderne SPA ohne Build-Tooling.
 3. Öffnen:
    - `http://127.0.0.1:5173`
 
-## Hinweise
+## Hinweisex
 
 - API-Basis ist standardmäßig `http://127.0.0.1:8000/api`.
 - API-URL kann oben rechts in der App angepasst werden.
