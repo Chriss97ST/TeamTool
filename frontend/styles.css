@@ -1,0 +1,412 @@
+:root {
+  --bg0: #060b12;
+  --bg1: #0b1621;
+  --surface: #111b28;
+  --surface-soft: #172536;
+  --text: #e6f0fb;
+  --muted: #8ca2b8;
+  --line: #2c3d52;
+  --brand: #06b6d4;
+  --brand-2: #0ea5e9;
+  --warm: #f59e0b;
+  --danger: #ef4444;
+  --ok: #22c55e;
+  --radius: 18px;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Sora", sans-serif;
+  color: var(--text);
+  background: linear-gradient(130deg, var(--bg0), var(--bg1));
+}
+
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(750px 450px at 8% 6%, rgba(14, 165, 233, 0.16), transparent),
+    radial-gradient(650px 520px at 92% 12%, rgba(245, 158, 11, 0.12), transparent),
+    radial-gradient(900px 750px at 52% 96%, rgba(6, 182, 212, 0.1), transparent);
+  pointer-events: none;
+}
+
+.app-shell {
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 26px;
+}
+
+.card {
+  background: rgba(17, 27, 40, 0.78);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(44, 61, 82, 0.8);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.auth-card {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+  animation: rise 0.6s ease both;
+}
+
+.brand-block {
+  background: linear-gradient(160deg, #0f766e, #0d9488);
+  color: #f1fbfb;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.brand-block .muted {
+  color: rgba(241, 251, 251, 0.85);
+}
+
+.form-grid {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+
+.form-grid.small {
+  background: #202131;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.88rem;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  background: #0e1724;
+  color: var(--text);
+}
+
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7b8fa4;
+}
+
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn.primary {
+  color: #fff;
+  background: linear-gradient(140deg, var(--brand), var(--brand-2));
+}
+
+.btn.ghost {
+  color: #fef3c7;
+  background: #3f2b05;
+}
+
+.btn.subtle {
+  background: #123044;
+  color: #7dd3fc;
+}
+
+.btn.danger {
+  color: #fff;
+  background: var(--danger);
+}
+
+.btn.inline {
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.app-view {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 18px;
+}
+
+.sidebar {
+  padding: 18px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-height: 84vh;
+}
+
+.nav-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-item {
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #12202f;
+  color: var(--text);
+  padding: 10px;
+  cursor: pointer;
+}
+
+.nav-item.active {
+  border-color: #0ea5e9;
+  background: #0b3348;
+  color: #a5f3fc;
+  font-weight: 600;
+}
+
+.content-area {
+  display: grid;
+  gap: 14px;
+  min-height: 84vh;
+}
+
+.topbar {
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+.base-url {
+  min-width: 320px;
+}
+
+.alerts {
+  display: grid;
+  gap: 8px;
+}
+
+.alert {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  animation: rise 0.2s ease both;
+}
+
+.alert.ok {
+  background: #0f2f1d;
+  color: var(--ok);
+}
+
+.alert.err {
+  background: #3a1116;
+  color: var(--danger);
+}
+
+.view-pane {
+  display: grid;
+  gap: 12px;
+  animation: fade 0.3s ease;
+}
+
+.grid-2 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-3 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.panel {
+  padding: 14px;
+}
+
+.kpi {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+}
+
+.list-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: #0e1724;
+}
+
+.list-item.chat-pick.active {
+  border-color: #0ea5e9;
+  background: #123044;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.row.between {
+  justify-content: space-between;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #123044;
+  color: #67e8f9;
+  font-size: 0.8rem;
+}
+
+.chat-layout {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 320px 1fr;
+}
+
+.message-list {
+  max-height: 430px;
+  overflow: auto;
+  display: grid;
+  gap: 7px;
+}
+
+.message {
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #0e1724;
+  border: 1px solid var(--line);
+}
+
+.task-board {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.task-col {
+  border-radius: 12px;
+  border: 1px dashed #395675;
+  background: #0f1b2b;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-height: 230px;
+}
+
+.note-content {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1080px) {
+  .auth-card {
+    grid-template-columns: 1fr;
+  }
+
+  .app-view {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    min-height: auto;
+  }
+
+  .chat-layout,
+  .task-board,
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .base-url {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}

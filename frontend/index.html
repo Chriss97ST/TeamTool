@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TeamTool Frontend</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-layer"></div>
+
+    <main class="app-shell">
+      <section id="authView" class="card auth-card">
+        <div class="brand-block">
+          <p class="eyebrow">Interne Team Kommunikation</p>
+          <h1>TeamTool</h1>
+          <p class="muted">
+            Schneller Teamflow fuer Chat, Auftragsplanung, Wochenzeiten und Notizen.
+          </p>
+        </div>
+
+        <form id="loginForm" class="form-grid">
+          <h2>Anmelden</h2>
+          <label>
+            E-Mail
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            Passwort
+            <input type="password" name="password" required />
+          </label>
+          <button type="submit" class="btn primary">Login</button>
+          <p class="hint">Noch kein Account? Direkt darunter registrieren.</p>
+        </form>
+
+        <form id="registerForm" class="form-grid small">
+          <h3>Registrierung</h3>
+          <label>
+            Voller Name
+            <input type="text" name="full_name" required />
+          </label>
+          <label>
+            E-Mail
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            Passwort
+            <input type="password" name="password" minlength="8" required />
+          </label>
+          <button type="submit" class="btn ghost">Registrieren</button>
+        </form>
+      </section>
+
+      <section id="appView" class="app-view hidden">
+        <aside class="sidebar card">
+          <div>
+            <p class="eyebrow">TeamTool</p>
+            <h2>Workspace</h2>
+            <p id="currentUser" class="muted">Nicht eingeloggt</p>
+          </div>
+
+          <nav class="nav-tabs" id="navTabs">
+            <button class="nav-item active" data-view="dashboard">Dashboard</button>
+            <button class="nav-item" data-view="chats">Chats</button>
+            <button class="nav-item" data-view="tasks">Tasks</button>
+            <button class="nav-item" data-view="weekplan">Wochenplan</button>
+            <button class="nav-item" data-view="notes">Notizen</button>
+            <button class="nav-item" data-view="users">User</button>
+          </nav>
+
+          <button id="logoutBtn" class="btn danger">Logout</button>
+        </aside>
+
+        <div class="content-area">
+          <header class="topbar card">
+            <div>
+              <p class="eyebrow">Status</p>
+              <h3 id="viewTitle">Dashboard</h3>
+            </div>
+            <label class="base-url">
+              API URL
+              <input id="apiBaseInput" type="text" placeholder="http://127.0.0.1:8000/api" />
+            </label>
+          </header>
+
+          <section id="alerts" class="alerts"></section>
+
+          <section id="dashboard" class="view-pane"></section>
+          <section id="chats" class="view-pane hidden"></section>
+          <section id="tasks" class="view-pane hidden"></section>
+          <section id="weekplan" class="view-pane hidden"></section>
+          <section id="notes" class="view-pane hidden"></section>
+          <section id="users" class="view-pane hidden"></section>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
